@@ -23,7 +23,8 @@ public class AnalizadorTema
     List<string> palabrasClave,
     Dictionary<string, int> bigramas,
     string idioma,
-    double diversidad)
+    double diversidad,
+    List<string> numeros)
     {
         var fragmentos = DividirEnFragmentos(textoCompleto, TamanoFragmento);
         string textoParaResumen;
@@ -52,23 +53,24 @@ public class AnalizadorTema
         }
 
         string promptFinal = $"""
-        Analiza el siguiente documento y genera un resumen completo en {(idioma == "es" ? "español" : "inglés")}.
+    Analiza el siguiente documento y genera un resumen completo en {(idioma == "es" ? "español" : "inglés")}.
 
-        Datos del análisis léxico:
-        - Palabras clave más frecuentes: {string.Join(", ", palabrasClave)}
-        - Frases frecuentes: {string.Join(", ", bigramas.Take(5).Select(b => b.Key))}
-        - Diversidad léxica: {diversidad}%
+    Datos del análisis léxico:
+    - Palabras clave más frecuentes: {string.Join(", ", palabrasClave)}
+    - Frases frecuentes: {string.Join(", ", bigramas.Take(5).Select(b => b.Key))}
+    - Números relevantes: {(numeros.Any() ? string.Join(", ", numeros) : "ninguno")}
+    - Diversidad léxica: {diversidad}%
 
-        Texto:
-        {textoParaResumen}
+    Texto:
+    {textoParaResumen}
 
-        El resumen debe incluir:
-        - Tema principal: De qué trata el documento en una oración.
-        - Tipo de documento: (académico, técnico, legal, literario, etc.)
-        - Resumen general: Un párrafo de 5-8 oraciones explicando el contenido.
-        - Puntos clave: Lista de 4-6 ideas más importantes.
-        - Conclusión: Para qué sirve o a qué conclusión llega.
-        """;
+    El resumen debe incluir:
+    - Tema principal: De qué trata el documento en una oración.
+    - Tipo de documento: (académico, técnico, legal, literario, etc.)
+    - Resumen general: Un párrafo de 5-8 oraciones explicando el contenido.
+    - Puntos clave: Lista de 4-6 ideas más importantes.
+    - Conclusión: Para qué sirve o a qué conclusión llega.
+    """;
 
         return await LlamarGroq(promptFinal);
     }

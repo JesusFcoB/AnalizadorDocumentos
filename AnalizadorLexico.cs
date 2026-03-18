@@ -21,7 +21,7 @@ public class AnalizadorLexico
         "been","has","were","will","would","could","should","than","then","them"
     };
 
-    // Tokenizar según idioma detectado
+    // Tokenizar según idioma detectado (solo palabras)
     public List<string> Tokenizar(string texto, string idioma = "es")
     {
         var stopwords = idioma == "en" ? StopWordsIngles : StopWordsEspanol;
@@ -29,6 +29,19 @@ public class AnalizadorLexico
         return Regex.Matches(texto.ToLower(), @"\b[a-záéíóúüñ]{4,}\b")
                     .Select(m => m.Value)
                     .Where(w => !stopwords.Contains(w))
+                    .ToList();
+    }
+
+    // Extraer números relevantes del texto
+    public List<string> ExtraerNumeros(string texto)
+    {
+        return Regex.Matches(texto, @"\b\d+([.,]\d+)?(%|°|km|kg|mb|gb|hz|usd|mxn|eur)?\b")
+                    .Select(m => m.Value)
+                    .Where(n => n.Length >= 2) // ignorar números de 1 dígito (muy genéricos)
+                    .GroupBy(n => n)
+                    .OrderByDescending(g => g.Count())
+                    .Select(g => g.Key)
+                    .Take(10)
                     .ToList();
     }
 

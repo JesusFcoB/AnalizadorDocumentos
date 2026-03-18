@@ -35,6 +35,7 @@ while (continuar)
         var frecuencias = lexer.ObtenerFrecuencias(tokens);
         var palabrasClave = lexer.ObtenerPalabrasClave(frecuencias);
         var bigramas = lexer.ObtenerBigramas(tokens);
+        var numeros = lexer.ExtraerNumeros(texto); 
         double diversidad = lexer.DiversidadLexica(tokens, frecuencias);
         double densidad = lexer.DensidadPalabrasClave(tokens, palabrasClave);
         int oraciones = lexer.ContarOraciones(texto);
@@ -57,6 +58,13 @@ while (continuar)
         foreach (var kv in bigramas.Take(5))
             Console.WriteLine($"   {kv.Key,-30} {kv.Value} veces");
 
+        // Agrega esto después:
+        if (numeros.Any())
+        {
+            Console.WriteLine($"\n🔢 Números relevantes encontrados:");
+            Console.WriteLine($"   {string.Join(", ", numeros)}");
+        }
+
         Console.Write("\n🤖 Generando resumen");
         var cts = new CancellationTokenSource();
         var animacion = Task.Run(async () => {
@@ -68,7 +76,7 @@ while (continuar)
         });
 
         var analizador = new AnalizadorTema();
-        string resultado = await analizador.GenerarResumen(texto, palabrasClave, bigramas, idioma, diversidad);
+        string resultado = await analizador.GenerarResumen(texto, palabrasClave, bigramas, idioma, diversidad, numeros);
 
         cts.Cancel();
         await animacion;
