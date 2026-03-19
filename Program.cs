@@ -35,7 +35,7 @@ while (continuar)
         var frecuencias = lexer.ObtenerFrecuencias(tokens);
         var palabrasClave = lexer.ObtenerPalabrasClave(frecuencias);
         var bigramas = lexer.ObtenerBigramas(tokens);
-        var numeros = lexer.ExtraerNumeros(texto); 
+        var numeros = lexer.ExtraerNumeros(texto);
         double diversidad = lexer.DiversidadLexica(tokens, frecuencias);
         double densidad = lexer.DensidadPalabrasClave(tokens, palabrasClave);
         int oraciones = lexer.ContarOraciones(texto);
@@ -67,7 +67,8 @@ while (continuar)
 
         Console.Write("\n🤖 Generando resumen");
         var cts = new CancellationTokenSource();
-        var animacion = Task.Run(async () => {
+        var animacion = Task.Run(async () =>
+        {
             while (!cts.Token.IsCancellationRequested)
             {
                 Console.Write(".");
@@ -91,13 +92,20 @@ while (continuar)
     }
 
     // Preguntar si quiere analizar otro documento
-    Console.WriteLine("\n¿Qué deseas hacer?");
-    Console.WriteLine("   [1] Analizar otro documento");
-    Console.WriteLine("   [2] Salir");
-    Console.Write("\nOpción: ");
+    string opcion = "";
+    while (opcion != "1" && opcion != "2")
+    {
+        Console.WriteLine("\n¿Qué deseas hacer?");
+        Console.WriteLine("   [1] Analizar otro documento");
+        Console.WriteLine("   [2] Salir");
+        Console.Write("\nOpción: ");
+        opcion = Console.ReadLine()?.Trim() ?? "";
 
-    string opcion = Console.ReadLine()?.Trim() ?? "2";
+        if (opcion != "1" && opcion != "2")
+            Console.WriteLine("   ⚠️ Opción inválida, elige 1 o 2.");
+    }
+    Console.Clear(); // limpia antes de continuar o salir
     continuar = opcion == "1";
-}
 
-Console.WriteLine("\n👋 ¡Hasta luego!");
+    Console.WriteLine("\n👋 ¡Hasta luego!");
+}
