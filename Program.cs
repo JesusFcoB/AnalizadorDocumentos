@@ -1,111 +1,14 @@
-﻿using AnalizadorDocumentos.Analizador;
-using AnalizadorDocumentos.Extractor;
-using AnalizadorDocumentos.Lexer;
+﻿using System.Windows.Forms;
 
-Console.OutputEncoding = System.Text.Encoding.UTF8;
+namespace AnalizadorDocumentos;
 
-bool continuar = true;
-
-while (continuar)
+static class Program
 {
-    Console.Clear();
-    Console.WriteLine("=== Analizador Léxico de Documentos ===\n");
-
-    Console.Write("Ingresa la ruta del documento: ");
-    string ruta = Console.ReadLine()?.Trim().Trim('"') ?? "";
-
-    if (!File.Exists(ruta))
+    [STAThread]
+    static void Main()
     {
-        Console.WriteLine("❌ Archivo no encontrado.");
-        Console.WriteLine("\nPresiona cualquier tecla para intentar de nuevo...");
-        Console.ReadKey();
-        continue;
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+        Application.Run(new MainForm());
     }
-
-    try
-    {
-        IExtractor extractor = new UniversalExtractor();
-
-        Console.WriteLine($"\n📄 Procesando archivo: {Path.GetFileName(ruta)}");
-        string texto = extractor.ExtraerTexto(ruta);
-
-        var lexer = new AnalizadorLexico();
-        string idioma = lexer.DetectarIdioma(texto);
-        var tokens = lexer.Tokenizar(texto, idioma);
-        var frecuencias = lexer.ObtenerFrecuencias(tokens);
-        var palabrasClave = lexer.ObtenerPalabrasClave(frecuencias);
-        var bigramas = lexer.ObtenerBigramas(tokens);
-        var numeros = lexer.ExtraerNumeros(texto);
-        double diversidad = lexer.DiversidadLexica(tokens, frecuencias);
-        double densidad = lexer.DensidadPalabrasClave(tokens, palabrasClave);
-        int oraciones = lexer.ContarOraciones(texto);
-        double promedioPalabras = lexer.PromedioWordsPorOracion(tokens, oraciones);
-
-        Console.WriteLine($"\n📊 Estadísticas léxicas:");
-        Console.WriteLine($"   Idioma detectado:               {(idioma == "es" ? "Español" : "Inglés")}");
-        Console.WriteLine($"   Total palabras (sin stopwords): {tokens.Count}");
-        Console.WriteLine($"   Palabras únicas:                {frecuencias.Count}");
-        Console.WriteLine($"   Diversidad léxica:              {diversidad}%");
-        Console.WriteLine($"   Densidad de palabras clave:     {densidad}%");
-        Console.WriteLine($"   Total de oraciones:             {oraciones}");
-        Console.WriteLine($"   Promedio palabras por oración:  {promedioPalabras}");
-
-        Console.WriteLine($"\n🔑 Palabras clave más frecuentes:");
-        foreach (var kv in frecuencias.Take(10))
-            Console.WriteLine($"   {kv.Key,-22} {kv.Value} veces");
-
-        Console.WriteLine($"\n🔗 Frases frecuentes (bigramas):");
-        foreach (var kv in bigramas.Take(5))
-            Console.WriteLine($"   {kv.Key,-30} {kv.Value} veces");
-
-        // Agrega esto después:
-        if (numeros.Any())
-        {
-            Console.WriteLine($"\n🔢 Números relevantes encontrados:");
-            Console.WriteLine($"   {string.Join(", ", numeros)}");
-        }
-
-        Console.Write("\n🤖 Generando resumen");
-        var cts = new CancellationTokenSource();
-        var animacion = Task.Run(async () =>
-        {
-            while (!cts.Token.IsCancellationRequested)
-            {
-                Console.Write(".");
-                await Task.Delay(800).ContinueWith(_ => { });
-            }
-        });
-
-        var analizador = new AnalizadorTema();
-        string resultado = await analizador.GenerarResumen(texto, palabrasClave, bigramas, idioma, diversidad, numeros);
-
-        cts.Cancel();
-        await animacion;
-        Console.WriteLine(" ✅\n");
-
-        Console.WriteLine("=== RESULTADO DEL ANÁLISIS ===");
-        Console.WriteLine(resultado);
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"\n❌ Error al procesar el archivo: {ex.Message}");
-    }
-
-    // Preguntar si quiere analizar otro documento
-    string opcion = "";
-    while (opcion != "1" && opcion != "2")
-    {
-        Console.WriteLine("\n¿Qué deseas hacer?");
-        Console.WriteLine("   [1] Analizar otro documento");
-        Console.WriteLine("   [2] Salir");
-        Console.Write("\nOpción: ");
-        opcion = Console.ReadLine()?.Trim() ?? "";
-
-        if (opcion != "1" && opcion != "2")
-            Console.WriteLine("   ⚠️ Opción inválida, elige 1 o 2.");
-    }
-    Console.Clear(); // limpia antes de continuar o salir
-    continuar = opcion == "1";
-
-    Console.WriteLine("\n👋 ¡Hasta luego!");
 }
