@@ -7,7 +7,7 @@ public class AnalizadorTema
 {
     private readonly HttpClient _http;
     private const string Url = "https://api.groq.com/openai/v1/chat/completions";
-    private const string ApiKey = "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"; // consola.groq.com
+    private const string ApiKey = "api"; 
     private const string Modelo = "llama-3.1-8b-instant";
     private const int TamanoFragmento = 3000; // Groq aguanta más texto
 
