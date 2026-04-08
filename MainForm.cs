@@ -17,7 +17,8 @@ public class MainForm : Form
     private readonly Color _textoPrincipal = Color.FromArgb(224, 224, 224);
     private readonly Color _verdeExito = Color.FromArgb(15, 110, 86);
 
-
+    private DataGridView dgvSintactico;
+    private DataGridView dgvSemantico;
     private TextBox txtRuta;
     private Button btnExaminar;
     private Button btnAnalizar;
@@ -43,14 +44,24 @@ public class MainForm : Form
             Padding = new Padding(10, 10, 25, 10), // Aumentamos padding derecho (25)
             AutoScroll = true,
             WrapContents = true
-        }; 
+        };
 
         this.Text = "Analizador Léxico de Documentos";
-        this.Size = new Size(850, 700);
+        this.Size = new Size(850, 700); // Tamaño de la ventana visible
+        this.MinimumSize = new Size(850, 600);
         this.BackColor = _fondoOscuro;
         this.ForeColor = _textoPrincipal;
         this.Font = new Font("Segoe UI", 10);
         this.StartPosition = FormStartPosition.CenterScreen;
+
+        // Panel con scroll que contiene todo
+        var panelScroll = new Panel
+        {
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            BackColor = _fondoOscuro
+        };
+        this.Controls.Add(panelScroll);
 
         // 1. INSTANCIAR PRIMERO (Evita errores de Null)
         txtRuta = new TextBox();
@@ -129,19 +140,107 @@ public class MainForm : Form
         rtbResumen.ForeColor = _textoPrincipal;
         rtbResumen.BorderStyle = BorderStyle.None;
         rtbResumen.Font = new Font("Consolas", 11);
+        // AHORA:
         rtbResumen.ReadOnly = true;
-        rtbResumen.Cursor = Cursors.Arrow;
-        rtbResumen.Enter += (s, e) => { btnLimpiar.Focus(); }; // Bloqueo de foco
+        rtbResumen.Cursor = Cursors.IBeam;      // cursor de texto para seleccionar
+        rtbResumen.ShortcutsEnabled = true;     // habilita Ctrl+C, Ctrl+A
+        rtbResumen.Enter -= (s, e) => { btnLimpiar.Focus(); }; // quita el bloqueo de foco
+
+        var btnCopiar = CrearBotonModerno("Copiar", new Point(695, 398), new Size(120, 24), Color.FromArgb(60, 60, 60));
+        btnCopiar.Font = new Font("Segoe UI", 8);
+        btnCopiar.Click += (s, e) =>
+        {
+            if (!string.IsNullOrEmpty(rtbResumen.Text))
+            {
+                Clipboard.SetText(rtbResumen.Text);
+                btnCopiar.Text = "¡Copiado!";
+                Task.Delay(1500).ContinueWith(_ =>
+                    btnCopiar.Invoke(() => btnCopiar.Text = "Copiar"));
+            }
+        };
+
+        var btnGuardar = CrearBotonModerno("Guardar", new Point(570, 398), new Size(120, 24), Color.FromArgb(60, 60, 60));
+        btnGuardar.Font = new Font("Segoe UI", 8);
+        btnGuardar.Click += (s, e) =>
+        {
+            if (string.IsNullOrEmpty(rtbResumen.Text)) return;
+
+            using var dialogo = new SaveFileDialog
+            {
+                Title = "Guardar resumen",
+                Filter = "Archivo de texto|*.txt",
+                FileName = "resumen_documento.txt"
+            };
+
+            if (dialogo.ShowDialog() == DialogResult.OK)
+            {
+                // Quitar los asteriscos del texto
+                string textoLimpio = rtbResumen.Text
+                    .Replace("**", "")
+                    .Replace("*", "");
+
+                File.WriteAllText(dialogo.FileName, textoLimpio, System.Text.Encoding.UTF8);
+
+                btnGuardar.Text = "¡Guardado!";
+                Task.Delay(1500).ContinueWith(_ =>
+                    btnGuardar.Invoke(() => btnGuardar.Text = "Guardar"));
+            }
+        };
+
+        // ANÁLISIS SINTÁCTICO
+        var lblSintactico = new Label { Text = "ANÁLISIS SINTÁCTICO", Location = new Point(20, 615), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = _textoPrincipal };
+        dgvSintactico = new DataGridView { Location = new Point(20, 638), Size = new Size(380, 130), BackgroundColor = _fondoPanel, GridColor = Color.FromArgb(60, 60, 60), BorderStyle = BorderStyle.None, RowHeadersVisible = false, AllowUserToAddRows = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, ReadOnly = true };
+        dgvSintactico.Columns.Add("Aspecto", "Aspecto");
+        dgvSintactico.Columns.Add("Resultado", "Resultado");
+        EstilarDataGrid(dgvSintactico);
+
+        // ANÁLISIS SEMÁNTICO
+        var lblSemantico = new Label { Text = "ANÁLISIS SEMÁNTICO", Location = new Point(420, 615), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = _textoPrincipal };
+        dgvSemantico = new DataGridView { Location = new Point(420, 638), Size = new Size(395, 130), BackgroundColor = _fondoPanel, GridColor = Color.FromArgb(60, 60, 60), BorderStyle = BorderStyle.None, RowHeadersVisible = false, AllowUserToAddRows = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, ReadOnly = true };
+        dgvSemantico.Columns.Add("Aspecto", "Aspecto");
+        dgvSemantico.Columns.Add("Resultado", "Resultado");
+        EstilarDataGrid(dgvSemantico);
+
+        dgvSemantico.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+        dgvSemantico.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+
+        dgvSintactico.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+        dgvSintactico.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
 
         // 7. BOTONES ACCIÓN
-        btnLimpiar = CrearBotonModerno("Limpiar", new Point(530, 620), new Size(110, 35), Color.Transparent);
+        btnLimpiar = CrearBotonModerno("Limpiar", new Point(530, 790), new Size(110, 35), Color.Transparent);
         btnLimpiar.Click += BtnLimpiar_Click;
 
-        btnAnalizar = CrearBotonModerno("Analizar documento", new Point(650, 620), new Size(165, 35), _azulAcento);
+        btnAnalizar = CrearBotonModerno("Analizar documento", new Point(650, 790), new Size(165, 35), _azulAcento);
         btnAnalizar.Enabled = false;
         btnAnalizar.Click += BtnAnalizar_Click;
 
-        this.Controls.AddRange(new Control[] { lblRuta, txtRuta, btnExaminar, progressBar, lblEstado, lblStats, dgvEstadisticas, lblTokens, flpTokens, lblResumen, rtbResumen, btnLimpiar, btnAnalizar });
+        this.Size = new Size(850, 900);
+
+        panelScroll.Controls.AddRange(new Control[]
+        {
+            lblRuta, txtRuta, btnExaminar,
+            progressBar, lblEstado,
+            lblStats, dgvEstadisticas,
+            lblTokens, flpTokens,
+            lblResumen, rtbResumen, btnCopiar, btnGuardar, 
+            lblSintactico, dgvSintactico,
+            lblSemantico, dgvSemantico,
+            btnLimpiar, btnAnalizar
+        });
+    }
+    
+    
+
+    private void EstilarDataGrid(DataGridView dgv)
+    {
+        dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(50, 50, 50);
+        dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+        dgv.DefaultCellStyle.BackColor = _fondoPanel;
+        dgv.DefaultCellStyle.ForeColor = Color.White;
+        dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(55, 55, 55);
+        dgv.DefaultCellStyle.SelectionForeColor = Color.White;
+        dgv.EnableHeadersVisualStyles = false;
     }
 
     private Button CrearBotonModerno(string texto, Point loc, Size tam, Color backColor)
@@ -259,6 +358,41 @@ public class MainForm : Form
             int oraciones = lexer.ContarOraciones(texto);
             double promedio = lexer.PromedioWordsPorOracion(tokens, oraciones);
 
+            // ANÁLISIS SINTÁCTICO
+            lblEstado.Text = "Analizando sintaxis...";
+            var sintactico = new AnalizadorDocumentos.Sintactico.AnalizadorSintactico();
+            var tiposOraciones = sintactico.AnalizarTiposOraciones(texto);
+            var (simples, compuestas) = sintactico.ContarComplejidad(texto);
+            var patrones = sintactico.DetectarPatrones(texto);
+            double promedioLongitud = sintactico.PromedioLongitudOraciones(texto);
+
+            dgvSintactico.Rows.Clear();
+            foreach (var tipo in tiposOraciones.Where(t => t.Value > 0))
+                dgvSintactico.Rows.Add(tipo.Key, tipo.Value);
+            dgvSintactico.Rows.Add("Simples", simples);
+            dgvSintactico.Rows.Add("Compuestas", compuestas);
+            dgvSintactico.Rows.Add("Patrones", string.Join(", ", patrones));
+
+            // ANÁLISIS SEMÁNTICO
+            lblEstado.Text = "Analizando semántica...";
+            var semantico = new AnalizadorDocumentos.Semantico.AnalizadorSemantico();
+            var (sentimiento, confianza) = semantico.AnalizarSentimiento(tokens);
+            var entidades = semantico.DetectarEntidades(texto);
+            string campo = semantico.DetectarCampoSemantico(palabrasClave);
+
+            dgvSemantico.Rows.Clear();
+            dgvSemantico.Rows.Add("Sentimiento", $"{sentimiento} ({confianza}%)");
+            dgvSemantico.Rows.Add("Campo semántico", campo);
+            foreach (var ent in entidades.Where(e => e.Value.Any()))
+                dgvSemantico.Rows.Add(ent.Key, string.Join(", ", ent.Value.Take(3)));
+
+            // COHERENCIA
+            var (nivelCoherencia, descCoherencia, puntajeCoherencia) =
+                semantico.AnalizarCoherencia(tokens, frecuencias, campo, simples, compuestas, patrones);
+
+            dgvSemantico.Rows.Add("Coherencia", $"{nivelCoherencia} ({puntajeCoherencia}/100)");
+            dgvSemantico.Rows.Add("", descCoherencia);
+
             // 3. Mostrar estadísticas
             dgvEstadisticas.Rows.Add("Idioma", idioma == "es" ? "Español" : "Inglés");
             dgvEstadisticas.Rows.Add("Palabras", tokens.Count);
@@ -280,8 +414,21 @@ public class MainForm : Form
             // 5. Groq IA
             lblEstado.Text = "Generando resumen con IA...";
             var analizador = new AnalizadorTema();
-            string resultado = await analizador.GenerarResumen(texto, palabrasClave, bigramas, idioma, diversidad, numeros);
-
+            string resultado = await analizador.GenerarResumen(
+                texto,
+                palabrasClave,
+                bigramas,
+                idioma,
+                diversidad,
+                numeros,
+                sentimiento,        // nuevo
+                campo,              // nuevo
+                patrones,           // nuevo
+                simples,            // nuevo
+                compuestas,         // nuevo
+                nivelCoherencia,    // nuevo
+                puntajeCoherencia  // nuevo  
+            );
             rtbResumen.Text = resultado;
             lblEstado.Text = "Análisis completado.";
             lblEstado.ForeColor = _verdeExito;
@@ -298,6 +445,8 @@ public class MainForm : Form
             btnExaminar.Enabled = true;
             btnLimpiar.Enabled = true;
         }
+
+
     }
 
     private void BtnLimpiar_Click(object sender, EventArgs e)
@@ -307,6 +456,8 @@ public class MainForm : Form
         dgvEstadisticas.Rows.Clear();
         flpTokens.Controls.Clear();
         rtbResumen.Clear();
+        dgvSintactico.Rows.Clear();  // agrega esto
+        dgvSemantico.Rows.Clear();   // agrega esto
 
         // Resetear indicadores visuales
         lblEstado.Text = "Esperando documento...";
@@ -321,4 +472,6 @@ public class MainForm : Form
         // Quitar foco de cualquier lado
         this.ActiveControl = null;
     }
+
+
 }

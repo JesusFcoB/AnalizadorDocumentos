@@ -7,7 +7,7 @@ public class AnalizadorTema
 {
     private readonly HttpClient _http;
     private const string Url = "https://api.groq.com/openai/v1/chat/completions";
-    private const string ApiKey = "api"; 
+    private const string ApiKey = ""; 
     private const string Modelo = "llama-3.1-8b-instant";
     private const int TamanoFragmento = 3000; // Groq aguanta más texto
 
@@ -24,7 +24,15 @@ public class AnalizadorTema
     Dictionary<string, int> bigramas,
     string idioma,
     double diversidad,
-    List<string> numeros)
+    List<string> numeros,
+    // Nuevos parámetros
+    string sentimiento,
+    string campoSemantico,
+    List<string> patrones,
+    int oracionesSimples,
+    int oracionesCompuestas,
+    string nivelCoherencia,
+    int puntajeCoherencia)
     {
         var fragmentos = DividirEnFragmentos(textoCompleto, TamanoFragmento);
         string textoParaResumen;
@@ -61,12 +69,23 @@ public class AnalizadorTema
     - Números relevantes: {(numeros.Any() ? string.Join(", ", numeros) : "ninguno")}
     - Diversidad léxica: {diversidad}%
 
+    Datos del análisis sintáctico:
+    - Oraciones simples: {oracionesSimples}
+    - Oraciones compuestas: {oracionesCompuestas}
+    - Patrones detectados: {string.Join(", ", patrones)}
+
+    Datos del análisis semántico:
+    - Sentimiento general: {sentimiento}
+    - Campo semántico: {campoSemantico}
+    - Coherencia del documento: {nivelCoherencia} ({puntajeCoherencia}/100)
+
     Texto:
     {textoParaResumen}
 
     El resumen debe incluir:
     - Tema principal: De qué trata el documento en una oración.
     - Tipo de documento: (académico, técnico, legal, literario, etc.)
+    - Tono del documento: basado en el sentimiento detectado.
     - Resumen general: Un párrafo de 5-8 oraciones explicando el contenido.
     - Puntos clave: Lista de 4-6 ideas más importantes.
     - Conclusión: Para qué sirve o a qué conclusión llega.
