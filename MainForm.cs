@@ -1,10 +1,11 @@
 ﻿using AnalizadorDocumentos.Analizador;
 using AnalizadorDocumentos.Extractor;
 using AnalizadorDocumentos.Lexer;
+using QuestPDF.Fluent;
 using System.Windows.Forms;
-using TextBox = System.Windows.Forms.TextBox;
-using Label = System.Windows.Forms.Label;
 using Button = System.Windows.Forms.Button;
+using Label = System.Windows.Forms.Label;
+using TextBox = System.Windows.Forms.TextBox;
 
 namespace AnalizadorDocumentos;
 
@@ -34,7 +35,8 @@ public class MainForm : Form
         InicializarComponentes();
     }
 
-    private void InicializarComponentes()
+    // Método para configurar la interfaz gráfica
+    private void InicializarComponentes() 
     {
         flpTokens = new FlowLayoutPanel
         {
@@ -168,22 +170,42 @@ public class MainForm : Form
             using var dialogo = new SaveFileDialog
             {
                 Title = "Guardar resumen",
-                Filter = "Archivo de texto|*.txt",
-                FileName = "resumen_documento.txt"
+                Filter = "Archivo de texto|*.txt|Word (.docx)|*.docx|PDF|*.pdf",
+                FileName = "resumen_documento"
             };
 
-            if (dialogo.ShowDialog() == DialogResult.OK)
-            {
-                // Quitar los asteriscos del texto
-                string textoLimpio = rtbResumen.Text
-                    .Replace("**", "")
-                    .Replace("*", "");
+            if (dialogo.ShowDialog() != DialogResult.OK) return;
 
-                File.WriteAllText(dialogo.FileName, textoLimpio, System.Text.Encoding.UTF8);
+            string textoLimpio = rtbResumen.Text
+                .Replace("**", "")
+                .Replace("*", "")
+                .Trim();
+
+            string extension = Path.GetExtension(dialogo.FileName).ToLower();
+
+            try
+            {
+                switch (extension)
+                {
+                    case ".txt":
+                        GuardarTxt(dialogo.FileName, textoLimpio);
+                        break;
+                    case ".docx":
+                        GuardarDocx(dialogo.FileName, textoLimpio);
+                        break;
+                    case ".pdf":
+                        GuardarPdf(dialogo.FileName, textoLimpio);
+                        break;
+                }
 
                 btnGuardar.Text = "¡Guardado!";
                 Task.Delay(1500).ContinueWith(_ =>
                     btnGuardar.Invoke(() => btnGuardar.Text = "Guardar"));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al guardar: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         };
 
@@ -232,7 +254,7 @@ public class MainForm : Form
     
     
 
-    private void EstilarDataGrid(DataGridView dgv)
+    private void EstilarDataGrid(DataGridView dgv) // Aplica un estilo moderno y oscuro a las tablas
     {
         dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(50, 50, 50);
         dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
@@ -243,6 +265,7 @@ public class MainForm : Form
         dgv.EnableHeadersVisualStyles = false;
     }
 
+    // Método para crear botones con estilo moderno
     private Button CrearBotonModerno(string texto, Point loc, Size tam, Color backColor)
     {
         return new Button
@@ -473,5 +496,69 @@ public class MainForm : Form
         this.ActiveControl = null;
     }
 
+    // Nota: Simple y universal, pero sin formato.
+    // Ideal para resúmenes puros o si el usuario quiere editar después en cualquier editor de texto.
+    private void GuardarTxt(string ruta, string texto) 
+    {
+        File.WriteAllText(ruta, texto, System.Text.Encoding.UTF8);
+    }
+
+    // Nota: OpenXML es un poco más complejo pero permite formato
+    // Básico sin depender de Word instalado
+    private void GuardarDocx(string ruta, string texto) 
+    {
+        using var doc = DocumentFormat.OpenXml.Packaging.WordprocessingDocument
+            .Create(ruta, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
+
+        var mainPart = doc.AddMainDocumentPart();
+        mainPart.Document = new DocumentFormat.OpenXml.Wordprocessing.Document();
+        var body = mainPart.Document.AppendChild(
+            new DocumentFormat.OpenXml.Wordprocessing.Body());
+
+        foreach (var linea in texto.Split('\n'))
+        {
+            var para = body.AppendChild(
+                new DocumentFormat.OpenXml.Wordprocessing.Paragraph());
+            var run = para.AppendChild(
+                new DocumentFormat.OpenXml.Wordprocessing.Run());
+            run.AppendChild(
+                new DocumentFormat.OpenXml.Wordprocessing.Text(linea.Trim()));
+        }
+
+        mainPart.Document.Save();
+    }
+
+    // Nota: QuestPDF es muy rápido y sencillo para generar PDFs con formato básico
+    private void GuardarPdf(string ruta, string texto) 
+    {
+        QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
+        QuestPDF.Fluent.Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(QuestPDF.Helpers.PageSizes.A4);
+                page.Margin(2, QuestPDF.Infrastructure.Unit.Centimetre);
+                page.DefaultTextStyle(x => x.FontSize(11));
+
+                page.Content().Column(col =>
+                {
+                    col.Item().Text("Resumen del documento")
+                        .FontSize(16)
+                        .Bold();
+
+                    col.Item().PaddingTop(10).Text("");
+
+                    foreach (var linea in texto.Split('\n'))
+                    {
+                        if (!string.IsNullOrWhiteSpace(linea))
+                            col.Item().Text(linea.Trim());
+                        else
+                            col.Item().PaddingTop(5).Text("");
+                    }
+                });
+            });
+        }).GeneratePdf(ruta);
+    }
 
 }
