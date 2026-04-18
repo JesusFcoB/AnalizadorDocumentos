@@ -12,6 +12,13 @@ public class UniversalExtractor : IExtractor
         if (reader == null)
             throw new Exception("Formato no soportado por GroupDocs.Parser");
 
-        return reader.ReadToEnd();
+        string texto = reader.ReadToEnd();
+
+        // Limpiar guiones de separación silábica (soft hyphens)
+        texto = texto.Replace("\u00AD", "");        // soft hyphen invisible
+        texto = System.Text.RegularExpressions.Regex.Replace(
+            texto, @"(\w+)\-\n(\w+)", "$1$2");      // guión al final de línea
+
+        return texto;
     }
 }

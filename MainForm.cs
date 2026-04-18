@@ -51,21 +51,15 @@ public class MainForm : Form
         };
 
         this.Text = "Analizador Léxico de Documentos";
-        this.Size = new Size(850, 700); // Tamaño de la ventana visible
+        // Tamaño de la ventana visible (lo que el usuario ve)
+        this.Size = new Size(850, 750);
         this.MinimumSize = new Size(850, 600);
         this.BackColor = _fondoOscuro;
         this.ForeColor = _textoPrincipal;
         this.Font = new Font("Segoe UI", 10);
         this.StartPosition = FormStartPosition.CenterScreen;
 
-        // Panel con scroll que contiene todo
-        var panelScroll = new Panel
-        {
-            Dock = DockStyle.Fill,
-            AutoScroll = true,
-            BackColor = _fondoOscuro
-        };
-        this.Controls.Add(panelScroll);
+        
 
         // 1. INSTANCIAR PRIMERO (Evita errores de Null)
         txtRuta = new TextBox();
@@ -103,7 +97,7 @@ public class MainForm : Form
         lblEstado.Font = new Font("Segoe UI", 9, FontStyle.Italic);
 
         // 4. CONFIGURAR TABLA (ESTADÍSTICAS)
-        var lblStats = new Label { Text = "ESTADÍSTICAS LÉXICAS", Location = new Point(20, 150), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+        var lblStats = new Label { Text = "ESTADÍSTICAS LÉXICAS", Location = new Point(20, 150), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = _azulAcento };
         dgvEstadisticas.Location = new Point(20, 175);
         dgvEstadisticas.Size = new Size(350, 200);
         dgvEstadisticas.BackgroundColor = _fondoPanel;
@@ -128,7 +122,7 @@ public class MainForm : Form
         dgvEstadisticas.DefaultCellStyle.SelectionForeColor = Color.White;
 
         // 5. CONFIGURAR TOKENS (CHIPS)
-        var lblTokens = new Label { Text = "TOKENS PRINCIPALES", Location = new Point(390, 150), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+        var lblTokens = new Label { Text = "TOKENS PRINCIPALES", Location = new Point(390, 150), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = _azulAcento };
         flpTokens.Location = new Point(390, 175);
         flpTokens.Size = new Size(425, 200);
         flpTokens.BackColor = _fondoPanel;
@@ -137,7 +131,7 @@ public class MainForm : Form
         flpTokens.WrapContents = true;
 
         // 6. CONFIGURAR RESUMEN
-        var lblResumen = new Label { Text = "Resumen generado por IA", Location = new Point(20, 400), AutoSize = true, ForeColor = Color.Gray };
+        var lblResumen = new Label { Text = "Resumen generado por IA", Location = new Point(20, 400), AutoSize = true, ForeColor = _azulAcento };
         rtbResumen.Location = new Point(20, 425);
         rtbResumen.Size = new Size(795, 180);
         rtbResumen.BackColor = _fondoPanel;
@@ -212,14 +206,14 @@ public class MainForm : Form
         };
 
         // ANÁLISIS SINTÁCTICO
-        var lblSintactico = new Label { Text = "ANÁLISIS SINTÁCTICO", Location = new Point(20, 615), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = _textoPrincipal };
+        var lblSintactico = new Label { Text = "ANÁLISIS SINTÁCTICO", Location = new Point(20, 615), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = _azulAcento };
         dgvSintactico = new DataGridView { Location = new Point(20, 638), Size = new Size(380, 130), BackgroundColor = _fondoPanel, GridColor = Color.FromArgb(60, 60, 60), BorderStyle = BorderStyle.None, RowHeadersVisible = false, AllowUserToAddRows = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, ReadOnly = true };
         dgvSintactico.Columns.Add("Aspecto", "Aspecto");
         dgvSintactico.Columns.Add("Resultado", "Resultado");
         EstilarDataGrid(dgvSintactico);
 
         // ANÁLISIS SEMÁNTICO
-        var lblSemantico = new Label { Text = "ANÁLISIS SEMÁNTICO", Location = new Point(420, 615), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = _textoPrincipal };
+        var lblSemantico = new Label { Text = "ANÁLISIS SEMÁNTICO", Location = new Point(420, 615), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = _azulAcento };
         dgvSemantico = new DataGridView { Location = new Point(420, 638), Size = new Size(395, 130), BackgroundColor = _fondoPanel, GridColor = Color.FromArgb(60, 60, 60), BorderStyle = BorderStyle.None, RowHeadersVisible = false, AllowUserToAddRows = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, ReadOnly = true };
         dgvSemantico.Columns.Add("Aspecto", "Aspecto");
         dgvSemantico.Columns.Add("Resultado", "Resultado");
@@ -230,14 +224,8 @@ public class MainForm : Form
 
 
         // PANEL DE INCOHERENCIAS
-        var lblIncoherencias = new Label
-        {
-            Text = "ANÁLISIS DE COHERENCIA Y SUGERENCIAS",
-            Location = new Point(20, 790),
-            AutoSize = true,
-            Font = new Font("Segoe UI", 9, FontStyle.Bold),
-            ForeColor = _textoPrincipal
-        };
+        var lblIncoherencias = new Label { Text = "ANÁLISIS DE COHERENCIA Y SUGERENCIAS", Location = new Point(20, 790), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = _azulAcento };
+
 
         dgvIncoherencias = new DataGridView
         {
@@ -261,14 +249,36 @@ public class MainForm : Form
         dgvIncoherencias.DefaultCellStyle.BackColor = Color.FromArgb(55, 30, 30);
         dgvIncoherencias.DefaultCellStyle.ForeColor = Color.FromArgb(255, 180, 180);
 
-        var lblCorrecciones = new Label
+        dgvIncoherencias.CellFormatting += (s, e) =>
         {
-            Text = "CORRECCIONES Y SUGERENCIAS DE MEJORA POR IA",
-            Location = new Point(20, 960),
-            AutoSize = true,
-            Font = new Font("Segoe UI", 9, FontStyle.Bold),
-            ForeColor = _textoPrincipal
+            if (e.RowIndex < 0) return;
+            var row = dgvIncoherencias.Rows[e.RowIndex];
+            string razon = row.Cells["Razon"].Value?.ToString() ?? "";
+
+            if (razon.Contains("repetidas") || razon.Contains("corta"))
+            {
+                // Amarillo suave — sugerencia leve
+                row.DefaultCellStyle.BackColor = Color.FromArgb(50, 45, 20);
+                row.DefaultCellStyle.ForeColor = Color.FromArgb(255, 220, 100);
+            }
+            else if (razon.Contains("Sin términos") || razon.Contains("Contraste") || razon.Contains("larga"))
+            {
+                // Rojo — problema más serio
+                row.DefaultCellStyle.BackColor = Color.FromArgb(55, 30, 30);
+                row.DefaultCellStyle.ForeColor = Color.FromArgb(255, 130, 130);
+            }
+            else
+            {
+                // Neutro gris para "Sin problemas"
+                row.DefaultCellStyle.BackColor = Color.FromArgb(30, 50, 30);
+                row.DefaultCellStyle.ForeColor = Color.FromArgb(100, 220, 100);
+            }
         };
+
+        var lblCorrecciones = new Label { Text = "CORRECCIONES Y SUGERENCIAS DE MEJORA POR IA", Location = new Point(20, 960), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = _azulAcento };
+
+        rtbResumen.BorderStyle = BorderStyle.FixedSingle;
+        
 
         rtbCorrecciones = new RichTextBox
         {
@@ -276,7 +286,7 @@ public class MainForm : Form
             Size = new Size(795, 180),
             BackColor = _fondoPanel,
             ForeColor = _textoPrincipal,
-            BorderStyle = BorderStyle.None,
+            BorderStyle = BorderStyle.FixedSingle,
             Font = new Font("Consolas", 10),
             ReadOnly = true,
             ScrollBars = RichTextBoxScrollBars.Vertical
@@ -286,32 +296,56 @@ public class MainForm : Form
         dgvSintactico.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
         dgvSintactico.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
 
+
+
         // 7. BOTONES ACCIÓN
-        btnLimpiar = CrearBotonModerno("Limpiar", new Point(530, 790), new Size(110, 35), Color.Transparent);
+        btnLimpiar = CrearBotonModerno("Limpiar", new Point(530, 1185), new Size(110, 35), Color.Transparent);
         btnLimpiar.Click += BtnLimpiar_Click;
 
-        btnAnalizar = CrearBotonModerno("Analizar documento", new Point(650, 790), new Size(165, 35), _azulAcento);
+        btnAnalizar = CrearBotonModerno("Analizar documento", new Point(650, 1185), new Size(165, 35), _azulAcento);
         btnAnalizar.Enabled = false;
         btnAnalizar.Click += BtnAnalizar_Click;
 
-        this.Size = new Size(850, 1300); // era 850, 900
+        var sep1 = new Panel { Location = new Point(20, 390), Size = new Size(795, 2), BackColor = Color.FromArgb(80, 80, 80) };
+var sep2 = new Panel { Location = new Point(20, 608), Size = new Size(795, 2), BackColor = Color.FromArgb(80, 80, 80) };
+var sep3 = new Panel { Location = new Point(20, 780), Size = new Size(795, 2), BackColor = Color.FromArgb(80, 80, 80) };
+var sep4 = new Panel { Location = new Point(20, 950), Size = new Size(795, 2), BackColor = Color.FromArgb(80, 80, 80) };
+var sep5 = new Panel { Location = new Point(20, 1175), Size = new Size(795, 2), BackColor = Color.FromArgb(80, 80, 80) };
 
-        btnLimpiar.Location = new Point(530, 1185);
-        btnAnalizar.Location = new Point(650, 1185);
+var panelScroll = new Panel      // ← esta línea es la que falta
+{
+    Dock = DockStyle.Fill,
+    AutoScroll = true,
+    BackColor = _fondoOscuro
+};
+this.Controls.Add(panelScroll);  // ← y esta
 
-        panelScroll.Controls.AddRange(new Control[]
-        {
-            lblRuta, txtRuta, btnExaminar,
-            progressBar, lblEstado,
-            lblStats, dgvEstadisticas,
-            lblTokens, flpTokens,
-            lblResumen, rtbResumen, btnCopiar, btnGuardar, 
-            lblSintactico, dgvSintactico,
-            lblSemantico, dgvSemantico,
-            lblIncoherencias, dgvIncoherencias,
-            lblCorrecciones, rtbCorrecciones,
-            btnLimpiar, btnAnalizar
-        });
+var panelContenido = new Panel
+{
+    Width = 830,
+    Height = 1280,
+    BackColor = _fondoOscuro
+};
+panelScroll.Controls.Add(panelContenido);
+
+panelContenido.Controls.AddRange(new Control[]
+{
+    lblRuta, txtRuta, btnExaminar,
+    progressBar, lblEstado,
+    sep1,
+    lblStats, dgvEstadisticas,
+    lblTokens, flpTokens,
+    sep2,
+    lblResumen, rtbResumen, btnCopiar, btnGuardar,
+    sep3,
+    lblSintactico, dgvSintactico,
+    lblSemantico, dgvSemantico,
+    sep4,
+    lblIncoherencias, dgvIncoherencias,
+    lblCorrecciones, rtbCorrecciones,
+    sep5,
+    btnLimpiar, btnAnalizar
+});
     }
     
     
@@ -511,7 +545,30 @@ public class MainForm : Form
                 sentimiento, campo, patrones, simples, compuestas,
                 nivelCoherencia, puntajeCoherencia
             );
-            rtbResumen.Text = resultado;
+            rtbResumen.Clear();
+            foreach (var linea in resultado.Split('\n'))
+            {
+                if (linea.StartsWith("**") || linea.Contains("**"))
+                {
+                    // Línea con negrita
+                    var partes = linea.Split(new[] { "**" }, StringSplitOptions.None);
+                    for (int j = 0; j < partes.Length; j++)
+                    {
+                        rtbResumen.SelectionFont = j % 2 == 1
+                            ? new Font("Consolas", 11, FontStyle.Bold)
+                            : new Font("Consolas", 11, FontStyle.Regular);
+                        rtbResumen.SelectionColor = j % 2 == 1 ? _azulAcento : _textoPrincipal;
+                        rtbResumen.AppendText(partes[j]);
+                    }
+                    rtbResumen.AppendText("\n");
+                }
+                else
+                {
+                    rtbResumen.SelectionFont = new Font("Consolas", 11, FontStyle.Regular);
+                    rtbResumen.SelectionColor = _textoPrincipal;
+                    rtbResumen.AppendText(linea + "\n");
+                }
+            }
 
             // 8. Detección y corrección de incoherencias
             lblEstado.Text = "Detectando incoherencias...";
