@@ -1,6 +1,7 @@
 ﻿using AnalizadorDocumentos.Analizador;
 using AnalizadorDocumentos.Extractor;
 using AnalizadorDocumentos.Lexer;
+using OxmlWordprocessing = DocumentFormat.OpenXml.Wordprocessing;
 using QuestPDF.Fluent;
 using System.Windows.Forms;
 using Button = System.Windows.Forms.Button;
@@ -29,7 +30,8 @@ public class MainForm : Form
     private FlowLayoutPanel flpTokens;
     private DataGridView dgvEstadisticas;
     private RichTextBox rtbResumen;
-
+    private DataGridView dgvIncoherencias;
+    private RichTextBox rtbCorrecciones;
     public MainForm()
     {
         InicializarComponentes();
@@ -226,6 +228,61 @@ public class MainForm : Form
         dgvSemantico.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
         dgvSemantico.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
 
+
+        // PANEL DE INCOHERENCIAS
+        var lblIncoherencias = new Label
+        {
+            Text = "ANÁLISIS DE COHERENCIA Y SUGERENCIAS",
+            Location = new Point(20, 790),
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9, FontStyle.Bold),
+            ForeColor = _textoPrincipal
+        };
+
+        dgvIncoherencias = new DataGridView
+        {
+            Location = new Point(20, 815),
+            Size = new Size(795, 130),
+            BackgroundColor = _fondoPanel,
+            GridColor = Color.FromArgb(60, 60, 60),
+            BorderStyle = BorderStyle.None,
+            RowHeadersVisible = false,
+            AllowUserToAddRows = false,
+            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+            ReadOnly = true
+        };
+        dgvIncoherencias.Columns.Add("Oracion", "Oración problemática");
+        dgvIncoherencias.Columns.Add("Razon", "Razón");
+        dgvIncoherencias.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+        dgvIncoherencias.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+        EstilarDataGrid(dgvIncoherencias);
+
+        // Highlight rojo suave para filas de incoherencias
+        dgvIncoherencias.DefaultCellStyle.BackColor = Color.FromArgb(55, 30, 30);
+        dgvIncoherencias.DefaultCellStyle.ForeColor = Color.FromArgb(255, 180, 180);
+
+        var lblCorrecciones = new Label
+        {
+            Text = "CORRECCIONES Y SUGERENCIAS DE MEJORA POR IA",
+            Location = new Point(20, 960),
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9, FontStyle.Bold),
+            ForeColor = _textoPrincipal
+        };
+
+        rtbCorrecciones = new RichTextBox
+        {
+            Location = new Point(20, 985),
+            Size = new Size(795, 180),
+            BackColor = _fondoPanel,
+            ForeColor = _textoPrincipal,
+            BorderStyle = BorderStyle.None,
+            Font = new Font("Consolas", 10),
+            ReadOnly = true,
+            ScrollBars = RichTextBoxScrollBars.Vertical
+        };
+
+
         dgvSintactico.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
         dgvSintactico.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
 
@@ -237,7 +294,10 @@ public class MainForm : Form
         btnAnalizar.Enabled = false;
         btnAnalizar.Click += BtnAnalizar_Click;
 
-        this.Size = new Size(850, 900);
+        this.Size = new Size(850, 1300); // era 850, 900
+
+        btnLimpiar.Location = new Point(530, 1185);
+        btnAnalizar.Location = new Point(650, 1185);
 
         panelScroll.Controls.AddRange(new Control[]
         {
@@ -248,6 +308,8 @@ public class MainForm : Form
             lblResumen, rtbResumen, btnCopiar, btnGuardar, 
             lblSintactico, dgvSintactico,
             lblSemantico, dgvSemantico,
+            lblIncoherencias, dgvIncoherencias,
+            lblCorrecciones, rtbCorrecciones,
             btnLimpiar, btnAnalizar
         });
     }
@@ -356,6 +418,14 @@ public class MainForm : Form
         dgvEstadisticas.Rows.Clear();
         flpTokens.Controls.Clear();
         rtbResumen.Clear();
+        dgvIncoherencias.Rows.Clear();
+        rtbCorrecciones.Clear();
+
+        string texto = string.Empty;
+        string campo = string.Empty;
+        string idioma = "es";
+        AnalizadorDocumentos.Semantico.AnalizadorSemantico? semantico = null;
+        AnalizadorTema? analizador = null;
 
         try
         {
@@ -365,12 +435,12 @@ public class MainForm : Form
             lblEstado.Text = "Extrayendo texto...";
             lblEstado.ForeColor = Color.Gray;
             IExtractor extractor = new UniversalExtractor();
-            string texto = await Task.Run(() => extractor.ExtraerTexto(ruta));
+            texto = await Task.Run(() => extractor.ExtraerTexto(ruta));
 
             // 2. Análisis léxico
             lblEstado.Text = "Analizando léxico...";
             var lexer = new AnalizadorLexico();
-            string idioma = lexer.DetectarIdioma(texto);
+            idioma = lexer.DetectarIdioma(texto);
             var tokens = lexer.Tokenizar(texto, idioma);
             var frecuencias = lexer.ObtenerFrecuencias(tokens);
             var palabrasClave = lexer.ObtenerPalabrasClave(frecuencias);
@@ -381,7 +451,7 @@ public class MainForm : Form
             int oraciones = lexer.ContarOraciones(texto);
             double promedio = lexer.PromedioWordsPorOracion(tokens, oraciones);
 
-            // ANÁLISIS SINTÁCTICO
+            // 3. Análisis sintáctico
             lblEstado.Text = "Analizando sintaxis...";
             var sintactico = new AnalizadorDocumentos.Sintactico.AnalizadorSintactico();
             var tiposOraciones = sintactico.AnalizarTiposOraciones(texto);
@@ -396,12 +466,12 @@ public class MainForm : Form
             dgvSintactico.Rows.Add("Compuestas", compuestas);
             dgvSintactico.Rows.Add("Patrones", string.Join(", ", patrones));
 
-            // ANÁLISIS SEMÁNTICO
+            // 4. Análisis semántico
             lblEstado.Text = "Analizando semántica...";
-            var semantico = new AnalizadorDocumentos.Semantico.AnalizadorSemantico();
+            semantico = new AnalizadorDocumentos.Semantico.AnalizadorSemantico();
             var (sentimiento, confianza) = semantico.AnalizarSentimiento(tokens);
             var entidades = semantico.DetectarEntidades(texto);
-            string campo = semantico.DetectarCampoSemantico(palabrasClave);
+            campo = semantico.DetectarCampoSemantico(palabrasClave);
 
             dgvSemantico.Rows.Clear();
             dgvSemantico.Rows.Add("Sentimiento", $"{sentimiento} ({confianza}%)");
@@ -409,14 +479,14 @@ public class MainForm : Form
             foreach (var ent in entidades.Where(e => e.Value.Any()))
                 dgvSemantico.Rows.Add(ent.Key, string.Join(", ", ent.Value.Take(3)));
 
-            // COHERENCIA
+            // Coherencia
             var (nivelCoherencia, descCoherencia, puntajeCoherencia) =
                 semantico.AnalizarCoherencia(tokens, frecuencias, campo, simples, compuestas, patrones);
 
             dgvSemantico.Rows.Add("Coherencia", $"{nivelCoherencia} ({puntajeCoherencia}/100)");
             dgvSemantico.Rows.Add("", descCoherencia);
 
-            // 3. Mostrar estadísticas
+            // 5. Estadísticas léxicas
             dgvEstadisticas.Rows.Add("Idioma", idioma == "es" ? "Español" : "Inglés");
             dgvEstadisticas.Rows.Add("Palabras", tokens.Count);
             dgvEstadisticas.Rows.Add("Únicas", frecuencias.Count);
@@ -425,34 +495,50 @@ public class MainForm : Form
             dgvEstadisticas.Rows.Add("Oraciones", oraciones);
             dgvEstadisticas.Rows.Add("Prom. palabras", promedio);
 
-            // 4. Mostrar tokens como Chips con sus frecuencias
+            // 6. Tokens chips
             int count = 0;
-            foreach (var kv in frecuencias.Take(25)) // Subí a 25 para llenar mejor el panel
+            foreach (var kv in frecuencias.Take(25))
             {
-                // kv.Key es la palabra, kv.Value es la frecuencia
                 AgregarTokenChip(kv.Key, kv.Value, count < 5);
                 count++;
             }
 
-            // 5. Groq IA
+            // 7. Resumen IA
             lblEstado.Text = "Generando resumen con IA...";
-            var analizador = new AnalizadorTema();
+            analizador = new AnalizadorTema();
             string resultado = await analizador.GenerarResumen(
-                texto,
-                palabrasClave,
-                bigramas,
-                idioma,
-                diversidad,
-                numeros,
-                sentimiento,        // nuevo
-                campo,              // nuevo
-                patrones,           // nuevo
-                simples,            // nuevo
-                compuestas,         // nuevo
-                nivelCoherencia,    // nuevo
-                puntajeCoherencia  // nuevo  
+                texto, palabrasClave, bigramas, idioma, diversidad, numeros,
+                sentimiento, campo, patrones, simples, compuestas,
+                nivelCoherencia, puntajeCoherencia
             );
             rtbResumen.Text = resultado;
+
+            // 8. Detección y corrección de incoherencias
+            lblEstado.Text = "Detectando incoherencias...";
+            var incoherencias = semantico.DetectarOracionesIncoherentes(texto, campo);
+
+            // Si el campo es General o no se detectaron problemas locales,
+            // pedir a la IA que haga el análisis completo
+            if (!incoherencias.Any())
+            {
+                lblEstado.Text = "Analizando coherencia con IA...";
+                string correcciones = await analizador.CorregirOraciones(
+                    ObtenerOracionesParaIA(texto), idioma);
+                dgvIncoherencias.Rows.Add("Análisis delegado a IA", "Ver sugerencias abajo");
+                rtbCorrecciones.Text = correcciones; // ← muestra lo que dijo la IA, no texto fijo
+            }
+            else
+            {
+                foreach (var (oracion, razon) in incoherencias)
+                {
+                    string fragmento = oracion.Length > 80 ? oracion[..80] + "..." : oracion;
+                    dgvIncoherencias.Rows.Add(fragmento, razon);
+                }
+                lblEstado.Text = "Corrigiendo oraciones con IA...";
+                string correcciones = await analizador.CorregirOraciones(incoherencias, idioma);
+                rtbCorrecciones.Text = correcciones;
+            }
+
             lblEstado.Text = "Análisis completado.";
             lblEstado.ForeColor = _verdeExito;
         }
@@ -468,8 +554,6 @@ public class MainForm : Form
             btnExaminar.Enabled = true;
             btnLimpiar.Enabled = true;
         }
-
-
     }
 
     private void BtnLimpiar_Click(object sender, EventArgs e)
@@ -481,6 +565,8 @@ public class MainForm : Form
         rtbResumen.Clear();
         dgvSintactico.Rows.Clear();  // agrega esto
         dgvSemantico.Rows.Clear();   // agrega esto
+        dgvIncoherencias.Rows.Clear();
+        rtbCorrecciones.Clear();
 
         // Resetear indicadores visuales
         lblEstado.Text = "Esperando documento...";
@@ -505,24 +591,21 @@ public class MainForm : Form
 
     // Nota: OpenXML es un poco más complejo pero permite formato
     // Básico sin depender de Word instalado
-    private void GuardarDocx(string ruta, string texto) 
+    private void GuardarDocx(string ruta, string texto)
     {
         using var doc = DocumentFormat.OpenXml.Packaging.WordprocessingDocument
             .Create(ruta, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
 
         var mainPart = doc.AddMainDocumentPart();
-        mainPart.Document = new DocumentFormat.OpenXml.Wordprocessing.Document();
+        mainPart.Document = new OxmlWordprocessing.Document();
         var body = mainPart.Document.AppendChild(
-            new DocumentFormat.OpenXml.Wordprocessing.Body());
+            new OxmlWordprocessing.Body());
 
         foreach (var linea in texto.Split('\n'))
         {
-            var para = body.AppendChild(
-                new DocumentFormat.OpenXml.Wordprocessing.Paragraph());
-            var run = para.AppendChild(
-                new DocumentFormat.OpenXml.Wordprocessing.Run());
-            run.AppendChild(
-                new DocumentFormat.OpenXml.Wordprocessing.Text(linea.Trim()));
+            var para = body.AppendChild(new OxmlWordprocessing.Paragraph());
+            var run = para.AppendChild(new OxmlWordprocessing.Run());
+            run.AppendChild(new OxmlWordprocessing.Text(linea.Trim()));
         }
 
         mainPart.Document.Save();
@@ -561,4 +644,32 @@ public class MainForm : Form
         }).GeneratePdf(ruta);
     }
 
+    private List<(string oracion, string razon)> ObtenerOracionesParaIA(string texto)
+    {
+        // Patrones a ignorar: copyright, fechas sueltas, títulos muy cortos, código
+        var patronesIgnorar = new[]
+        {
+        @"^copyright\s",
+        @"^\d{4}\s",
+        @"^www\.",
+        @"^https?://",
+        @"@",                          // emails
+        @"^\s*[A-Z][a-z]+\s*$",        // título de una sola palabra
+        @"[{}();=<>]",                 // código de programación
+        @"^(página|page)\s*\d",        // pies de página
+        @"^\d+$",                      // solo números
+        @"all rights reserved",
+        @"todos los derechos"
+    };
+
+        return System.Text.RegularExpressions.Regex
+            .Split(texto, @"(?<=[.!?])\s+")
+            .Where(o => o.Trim().Length > 25)
+            .Where(o => !patronesIgnorar.Any(p =>
+                System.Text.RegularExpressions.Regex.IsMatch(
+                    o.Trim(), p, System.Text.RegularExpressions.RegexOptions.IgnoreCase)))
+            .Take(8)
+            .Select(o => (o.Trim(), "Revisar coherencia y estilo"))
+            .ToList();
+    }
 }

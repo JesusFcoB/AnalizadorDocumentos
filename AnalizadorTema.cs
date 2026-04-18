@@ -144,4 +144,56 @@ public class AnalizadorTema
 
         return fragmentos;
     }
+
+    public async Task<string> CorregirOraciones(
+    List<(string oracion, string razon)> oracionesProblematicas,
+    string idioma)
+    {
+        if (!oracionesProblematicas.Any())
+            return "No se encontraron oraciones para analizar.";
+
+        bool esAnalisisGeneral = oracionesProblematicas.All(o =>
+            o.razon == "Revisar coherencia y estilo");
+
+        var listado = string.Join("\n", oracionesProblematicas
+            .Select((o, i) => $"{i + 1}. \"{o.oracion}\"" +
+                (esAnalisisGeneral ? "" : $"\n   Problema detectado: {o.razon}")));
+
+        string prompt = esAnalisisGeneral
+     ? $"""
+    Eres un corrector de estilo en {(idioma == "es" ? "español" : "inglés")}.
+    Analiza estas oraciones y detecta cualquier problema de coherencia, claridad o estilo.
+    Si una oración está bien, indícalo. Si tiene problemas, corrígela.
+    
+    IGNORA y marca como correctas: pies de página, fechas sueltas, nombres propios,
+    fragmentos de copyright, títulos cortos de sección, y código de programación.
+
+    Formato para cada oración:
+    [N]. ❌ Original: "..."
+         🔍 Problema: ...
+         ✅ Corrección: "..."
+    (o si está bien)
+    [N]. ✅ "..." — Sin problemas detectados.
+
+    Oraciones:
+    {listado}
+    """
+     : $"""
+    Eres un corrector de estilo y coherencia textual en {(idioma == "es" ? "español" : "inglés")}.
+    Para cada oración con problema detectado, explica brevemente el problema y da una versión corregida.
+    
+    IGNORA y marca como correctas: pies de página, fechas sueltas, nombres propios,
+    fragmentos de copyright, títulos cortos de sección, y código de programación.
+
+    Formato:
+    [N]. ❌ Original: "..."
+         🔍 Problema: ...
+         ✅ Corrección: "..."
+
+    Oraciones:
+    {listado}
+    """;
+
+        return await LlamarGroq(prompt);
+    }
 }
